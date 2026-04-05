@@ -1,0 +1,65 @@
+services:
+  dabib:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dabib
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      # LLM endpoint used by the FastAPI proxy
+      - LLM_SERVER_URL=http://llm:8090/v1/chat/completions
+
+      # SearxNG endpoint used for external fact verification
+      - SEARXNG_URL=http://searxng:8080/search
+      - SEARXNG_TIMEOUT=15
+
+      # Persistent memory files stored inside the shared volume
+      - MEMORY_DB_PATH=/data/biological_memory
+      - USER_PROFILE_FILE=/data/user_profile.txt
+      - EPISODE_LOG_FILE=/data/episodes_log.jsonl
+
+    volumes:
+      # Shared persistent storage for ChromaDB and text artifacts
+      - dabib_data:/data
+
+    depends_on:
+      - llm
+      - searxng
+
+  llm:
+    # Replace this image with your real OpenAI-compatible LLM server
+    # Example alternatives: llama-api-server, text-generation-webui, ollama-openai bridge, etc.
+    image: ghcr.io/your-llm-server:latest
+    container_name: dabib-llm
+    restart: unless-stopped
+    expose:
+      - "8090"
+    ports:
+      - "8090:8090"
+    environment:
+      # Adjust these variables to your LLM server implementation
+      - HOST=0.0.0.0
+      - PORT=8090
+
+  searxng:
+    image: docker.io/searxng/searxng:latest
+    container_name: dabib-searxng
+    restart: unless-stopped
+    ports:
+      # Local access to the search UI/API
+      - "8081:8080"
+    environment:
+      # Base URL for reverse-proxy / direct access setups
+      - SEARXNG_BASE_URL=http://localhost:8081/
+      - UWSGI_WORKERS=4
+      - UWSGI_THREADS=4
+    volumes:
+      # Optional persistent config folder
+      - ./config/searxng:/etc/searxng
+      - ./data/searxng:/var/cache/searxng
+
+volumes:
+  # Persistent storage for DABIB memory artifacts
+  dabib_data:
