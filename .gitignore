@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+.idea/
+.vscode/
+
+# DABIB memory artifacts
+biological_memory/
+user_profile.txt
+episodes_log.jsonl
